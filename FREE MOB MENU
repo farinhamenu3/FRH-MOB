@@ -28,10 +28,6 @@ local CheatSettings = {
 
 -- Variáveis para controle do Aimbot
 local aimbotConnection = nil
-local isDragging = false
-local dragStart = nil
-local buttonStartPos = nil
-local dragThreshold = 10 -- Distância mínima para considerar como drag
 
 -- Criando a ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
@@ -41,6 +37,35 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
 ScreenGui.Parent = success and coreGui or LocalPlayer:WaitForChild("PlayerGui")
+
+-- =============================================================================
+-- PAINEL PRINCIPAL
+-- =============================================================================
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 700, 0, 540)
+MainFrame.Position = UDim2.new(0.5, -350, 0.5, -270)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+-- Título
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0, 200, 0, 40)
+TitleLabel.Position = UDim2.new(1, -220, 0, 10)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "FRH MENU"
+TitleLabel.TextColor3 = Color3.fromRGB(168, 85, 247)
+TitleLabel.TextSize = 22
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Right
+TitleLabel.Parent = MainFrame
 
 -- =============================================================================
 -- BOTÃO FLUTUANTE PARA MOBILE (ABRIR/FECHAR)
@@ -86,9 +111,10 @@ ButtonText.ZIndex = 101
 ButtonText.Parent = FloatButton
 
 -- =============================================================================
--- FUNÇÃO PARA ALTERNAR VISIBILIDADE DO PAINEL (COM ANIMAÇÃO)
+-- FUNÇÃO PARA ALTERNAR VISIBILIDADE DO PAINEL
 -- =============================================================================
 local function ToggleMenu()
+	print("ToggleMenu chamado!") -- Debug
 	CheatSettings.MenuVisible = not CheatSettings.MenuVisible
 	
 	if CheatSettings.MenuVisible then
@@ -98,6 +124,7 @@ local function ToggleMenu()
 		local tween = TweenService:Create(MainFrame, tweenInfo, goal)
 		tween:Play()
 		ButtonText.Text = "MENU"
+		print("Menu ABERTO")
 	else
 		local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 		local goal = {Position = UDim2.new(0.5, -350, 0.5, -270, true)}
@@ -107,45 +134,46 @@ local function ToggleMenu()
 			MainFrame.Visible = false
 		end)
 		ButtonText.Text = "MENU"
+		print("Menu FECHADO")
 	end
 end
 
 -- =============================================================================
--- SISTEMA DE DRAG DO BOTÃO (CORRIGIDO)
+-- EVENTO DE CLIQUE DO BOTÃO (MAIS SIMPLES E DIRETO)
 -- =============================================================================
-local isDragging = false
+FloatButton.MouseButton1Click:Connect(function()
+	print("Botão clicado!")
+	ToggleMenu()
+end)
+
+-- =============================================================================
+-- DRAG DO BOTÃO FLUTUANTE (SIMPLIFICADO)
+-- =============================================================================
+local dragging = false
 local dragStartPos = nil
-local dragStartTime = nil
-local hasMoved = false
+local startPos = nil
 
 FloatButton.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		isDragging = true
-		hasMoved = false
+		dragging = true
 		dragStartPos = input.Position
-		dragStartTime = tick()
-		buttonStartPos = FloatButton.Position
+		startPos = FloatButton.Position
 	end
 end)
 
 FloatButton.InputChanged:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
-	if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+	if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
 		local delta = input.Position - dragStartPos
 		
-		-- Se moveu mais que o threshold, considera como drag
-		if delta.Magnitude > 15 then
-			hasMoved = true
-		end
-		
-		-- Só move se já tiver passado do threshold
-		if hasMoved then
+		-- Só move se tiver arrastado mais de 20 pixels
+		if delta.Magnitude > 20 then
 			local newPos = UDim2.new(
-				buttonStartPos.X.Scale,
-				buttonStartPos.X.Offset + delta.X,
-				buttonStartPos.Y.Scale,
-				buttonStartPos.Y.Offset + delta.Y
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
 			)
 			
 			-- Limita o botão dentro da tela
@@ -167,43 +195,9 @@ end)
 FloatButton.InputEnded:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		-- Se não moveu ou moveu pouco, considera como clique
-		if not hasMoved then
-			ToggleMenu()
-		end
-		isDragging = false
-		hasMoved = false
+		dragging = false
 	end
 end)
-
--- =============================================================================
--- PAINEL PRINCIPAL
--- =============================================================================
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 700, 0, 540)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -270)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 24)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true 
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainFrame
-
--- Título
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(0, 200, 0, 40)
-TitleLabel.Position = UDim2.new(1, -220, 0, 10)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "FRH MENU"
-TitleLabel.TextColor3 = Color3.fromRGB(168, 85, 247)
-TitleLabel.TextSize = 22
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Right
-TitleLabel.Parent = MainFrame
 
 -- =============================================================================
 -- GERENCIADOR DE ABAS
@@ -1057,7 +1051,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- =============================================================================
--- RODAPÉ ATUALIZADO - NOME DO USUÁRIO E STATUS CONECTADO
+-- RODAPÉ - NOME DO USUÁRIO E STATUS CONECTADO
 -- =============================================================================
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 30)
@@ -1066,7 +1060,6 @@ Footer.BackgroundColor3 = Color3.fromRGB(15, 12, 18)
 Footer.BorderSizePixel = 0
 Footer.Parent = MainFrame
 
--- Nome do Usuário (esquerda)
 local UserNameLabel = Instance.new("TextLabel")
 UserNameLabel.Size = UDim2.new(0, 250, 1, 0)
 UserNameLabel.Position = UDim2.new(0, 15, 0, 0)
@@ -1078,7 +1071,6 @@ UserNameLabel.TextSize = 13
 UserNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 UserNameLabel.Parent = Footer
 
--- Status Conectado (direita)
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(0, 150, 1, 0)
 StatusLabel.Position = UDim2.new(1, -165, 0, 0)
@@ -1091,7 +1083,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Right
 StatusLabel.Parent = Footer
 
 -- =============================================================================
--- KEYBIND PC (CONTINUA FUNCIONANDO)
+-- KEYBIND PC
 -- =============================================================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
@@ -1101,7 +1093,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- =============================================================================
--- INICIALIZAÇÃO - GARANTE QUE O PAINEL ESTEJA VISÍVEL
+-- INICIALIZAÇÃO
 -- =============================================================================
 MainFrame.Visible = true
 FloatButton.Visible = true
+print("Menu FRH carregado! Clique no botão MENU ou pressione RightControl para abrir/fechar.")
